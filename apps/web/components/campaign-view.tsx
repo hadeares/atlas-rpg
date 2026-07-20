@@ -461,6 +461,20 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
     }
   }
 
+  async function regenerateInviteCode() {
+    if (!window.confirm('Gerar um novo código de convite? O código anterior deixará de funcionar.')) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await apiRequest<{ inviteCode: string }>(`/campaigns/${campaignId}/invite-code/regenerate`, { method: 'POST' });
+      setCampaign((current) => current ? { ...current, inviteCode: result.inviteCode } : current);
+    } catch (caughtError) {
+      setError(readError(caughtError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copyNarration(text?: string) {
     if (!text) return;
     await navigator.clipboard.writeText(text);
@@ -642,7 +656,16 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
                   {activeTab === 'HISTORICO' && isMaster && <SessionLogTab campaignId={campaignId} />}
                   {activeTab === 'MEMBROS' && isMaster && (
                     <section className="sidebar-section member-panel">
-                      <p className="helper-text">Qualquer pessoa pode criar uma conta em “Criar conta”. Depois, adicione o e-mail aqui como jogador ou mestre.</p>
+                      {campaign.inviteCode && (
+                        <div className="invite-code-box">
+                          <div><span className="eyebrow">Código de convite</span><strong>{campaign.inviteCode}</strong></div>
+                          <div className="row-actions">
+                            <button type="button" className="ghost-button mini-button" onClick={() => navigator.clipboard.writeText(campaign.inviteCode ?? '')}>Copiar</button>
+                            <button type="button" className="ghost-button mini-button" disabled={busy} onClick={() => void regenerateInviteCode()}>Gerar novo</button>
+                          </div>
+                        </div>
+                      )}
+                      <p className="helper-text">Compartilhe o código acima para que jogadores entrem sozinhos em “Entrar com código”, ou adicione o e-mail manualmente abaixo.</p>
                       <form className="form-stack" onSubmit={addMember}>
                         <label>E-mail do usuário<input type="email" value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} required /></label>
                         <label>Função<select value={memberRole} onChange={(event) => setMemberRole(event.target.value as 'MASTER' | 'PLAYER')}><option value="PLAYER">Jogador</option><option value="MASTER">Mestre</option></select></label>

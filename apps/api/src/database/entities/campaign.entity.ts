@@ -19,6 +19,9 @@ export class Campaign {
   @Column({ length: 120 })
   seed: string;
 
+  @Column({ type: 'varchar', length: 12, unique: true, nullable: true })
+  inviteCode: string | null;
+
   @Column({ type: 'integer', default: 6 })
   radius: number;
 

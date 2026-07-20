@@ -26,6 +26,9 @@ export function CampaignsDashboard() {
   const [error, setError] = useState('');
   const [session, setSession] = useState<AuthSession | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   const hexCount = useMemo(() => 1 + 3 * radius * (radius + 1), [radius]);
   const mapSizeLabel = useMemo(() => {
@@ -114,6 +117,23 @@ export function CampaignsDashboard() {
     }
   }
 
+  async function joinCampaign(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setJoinBusy(true);
+    setJoinError('');
+    try {
+      const campaign = await apiRequest<Campaign>('/campaigns/join', {
+        method: 'POST',
+        body: JSON.stringify({ inviteCode: inviteCodeInput.trim() })
+      });
+      router.push(`/campaigns/${campaign.id}`);
+    } catch (caughtError) {
+      setJoinError(readError(caughtError));
+    } finally {
+      setJoinBusy(false);
+    }
+  }
+
   function updateRadius(value: number) {
     setRadius(Math.min(maximumRadius, Math.max(minimumRadius, Math.round(value))));
   }
@@ -186,6 +206,14 @@ export function CampaignsDashboard() {
         </div>
 
         <aside className="panel create-panel">
+          <p className="eyebrow">Já tem um convite?</p>
+          <h2>Entrar com código</h2>
+          <form className="form-stack compact-form join-code-form" onSubmit={joinCampaign}>
+            <label>Código de convite<input value={inviteCodeInput} onChange={(event) => setInviteCodeInput(event.target.value.toUpperCase())} placeholder="Ex.: 7F3K9QZ" required minLength={4} maxLength={12} /></label>
+            {joinError && <p className="global-error compact-error">{joinError}</p>}
+            <button className="ghost-button" disabled={joinBusy}>{joinBusy ? 'Entrando...' : 'Entrar na campanha'}</button>
+          </form>
+
           <p className="eyebrow">Nova simulação</p>
           <h2>Criar campanha</h2>
           <p className="helper-text">Todos os hexágonos recebem terreno, história, lendas, rumores, fauna, ameaças e horror no momento da criação.</p>

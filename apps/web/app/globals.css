@@ -2024,6 +2024,30 @@ select:focus {
   }
 }
 
+.invite-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.invite-code-box strong {
+  display: block;
+  color: var(--accent-strong);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.join-code-form {
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed var(--border-light);
+}
+
 .print-sheet {
   display: none;
 }

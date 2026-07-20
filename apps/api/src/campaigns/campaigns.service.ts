@@ -1,5 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomInt } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
 import { CacheService } from '../cache/cache.service';
 import { CampaignEvent } from '../database/entities/campaign-event.entity';
@@ -13,6 +14,17 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignMemberDto } from './dto/update-campaign-member.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { CampaignBible, generateCampaignBible } from './generation/campaign-bible-generator';
+
+// Sem 0/O/1/I/L para reduzir erro de digitação ao compartilhar o código por voz ou texto.
+const inviteCodeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function generateInviteCode(): string {
+  let code = '';
+  for (let index = 0; index < 7; index += 1) {
+    code += inviteCodeAlphabet[randomInt(inviteCodeAlphabet.length)];
+  }
+  return code;
+}
 
 export interface CampaignAccess {
   campaign: Campaign;
@@ -66,9 +78,25 @@ export class CampaignsService implements OnModuleInit {
       }
       await this.campaignsRepository.save(missingBible, { chunk: 50 });
     }
+
+    const missingInviteCode = campaigns.filter((campaign) => !campaign.inviteCode);
+    for (const campaign of missingInviteCode) {
+      campaign.inviteCode = await this.generateUniqueInviteCode();
+      await this.campaignsRepository.save(campaign);
+    }
+  }
+
+  private async generateUniqueInviteCode(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const code = generateInviteCode();
+      const inUse = await this.campaignsRepository.count({ where: { inviteCode: code } });
+      if (inUse === 0) return code;
+    }
+    throw new Error('Não foi possível gerar um código de convite único.');
   }
 
   async create(ownerId: string, dto: CreateCampaignDto) {
+    const inviteCode = await this.generateUniqueInviteCode();
     return this.dataSource.transaction(async (manager) => {
       const bible = generateCampaignBible(dto.seed.trim());
       const campaign = manager.create(Campaign, {
@@ -76,6 +104,7 @@ export class CampaignsService implements OnModuleInit {
         name: dto.name.trim(),
         description: dto.description?.trim() || null,
         seed: dto.seed.trim(),
+        inviteCode,
         radius: dto.radius,
         currentQ: 0,
         currentR: 0,
@@ -278,6 +307,29 @@ export class CampaignsService implements OnModuleInit {
     };
   }
 
+  async joinByCode(userId: string, inviteCode: string) {
+    const campaign = await this.campaignsRepository.findOne({ where: { inviteCode: inviteCode.trim().toUpperCase() } });
+    if (!campaign) throw new NotFoundException('Código de convite inválido.');
+
+    const existing = await this.membersRepository.findOne({ where: { campaignId: campaign.id, userId } });
+    if (!existing) {
+      await this.membersRepository.save(this.membersRepository.create({
+        campaignId: campaign.id,
+        userId,
+        role: CampaignMemberRole.PLAYER
+      }));
+    }
+
+    return this.findOne(userId, campaign.id);
+  }
+
+  async regenerateInviteCode(userId: string, campaignId: string) {
+    const access = await this.ensureMaster(userId, campaignId);
+    access.campaign.inviteCode = await this.generateUniqueInviteCode();
+    await this.campaignsRepository.save(access.campaign);
+    return { inviteCode: access.campaign.inviteCode };
+  }
+
   async updateMember(userId: string, campaignId: string, memberId: string, dto: UpdateCampaignMemberDto) {
     const access = await this.ensureMaster(userId, campaignId);
     const member = await this.membersRepository.findOne({ where: { id: memberId, campaignId }, relations: { user: true } });
@@ -309,7 +361,7 @@ export class CampaignsService implements OnModuleInit {
     isOwner: boolean,
     counts: { hexCount: number; memberCount: number }
   ) {
-    const { simulationState: _simulationState, ...safeCampaign } = campaign;
+    const { simulationState: _simulationState, inviteCode: _inviteCode, ...safeCampaign } = campaign;
     const playerView = accessRole === CampaignMemberRole.PLAYER;
     const bible = this.readBible(campaign) ?? generateCampaignBible(campaign.seed);
     return {
@@ -319,7 +371,8 @@ export class CampaignsService implements OnModuleInit {
       currentWeather: campaign.simulationState?.currentWeather ?? null,
       ...(playerView ? {} : {
         worldBible: bible,
-        solarDecayStage: Number(campaign.simulationState?.solarDecayStage ?? 1)
+        solarDecayStage: Number(campaign.simulationState?.solarDecayStage ?? 1),
+        inviteCode: campaign.inviteCode
       }),
       hexCount: counts.hexCount,
       memberCount: counts.memberCount,

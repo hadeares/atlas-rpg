@@ -116,6 +116,7 @@ export interface Campaign {
   worldBible?: CampaignBible;
   solarDecayStage?: number;
   currentWeather?: CampaignWeather | null;
+  inviteCode?: string;
 }
 
 export interface CampaignEventData {

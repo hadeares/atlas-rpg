@@ -5,6 +5,7 @@ import { CurrentUser } from '../common/current-user.decorator';
 import { CampaignsService } from './campaigns.service';
 import { AddCampaignMemberDto } from './dto/add-campaign-member.dto';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { JoinCampaignDto } from './dto/join-campaign.dto';
 import { UpdateCampaignMemberDto } from './dto/update-campaign-member.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 
@@ -21,6 +22,11 @@ export class CampaignsController {
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
     return this.campaignsService.findAll(user.userId);
+  }
+
+  @Post('join')
+  join(@CurrentUser() user: AuthUser, @Body() dto: JoinCampaignDto) {
+    return this.campaignsService.joinByCode(user.userId, dto.inviteCode);
   }
 
   @Get(':campaignId')
@@ -46,6 +52,11 @@ export class CampaignsController {
   @Delete(':campaignId')
   remove(@CurrentUser() user: AuthUser, @Param('campaignId') campaignId: string) {
     return this.campaignsService.remove(user.userId, campaignId);
+  }
+
+  @Post(':campaignId/invite-code/regenerate')
+  regenerateInviteCode(@CurrentUser() user: AuthUser, @Param('campaignId') campaignId: string) {
+    return this.campaignsService.regenerateInviteCode(user.userId, campaignId);
   }
 
   @Get(':campaignId/members')
