@@ -16,6 +16,7 @@ import {
   RandomEncounter
 } from '../database/entities/random-encounter.entity';
 import { HexLore } from '../hexes/generation/lore-generator';
+import { CampaignsGateway } from '../realtime/campaigns.gateway';
 import { EncounterCreatureMode, GenerateEncounterDto } from './dto/generate-encounter.dto';
 import { ListEncountersQueryDto } from './dto/list-encounters-query.dto';
 import { UpdateEncounterStatusDto } from './dto/update-encounter-status.dto';
@@ -33,7 +34,8 @@ export class EncountersService {
     private readonly eventsRepository: Repository<CampaignEvent>,
     private readonly campaignsService: CampaignsService,
     private readonly creaturesService: CreaturesService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly gateway: CampaignsGateway
   ) {}
 
   async generate(userId: string, campaignId: string, dto: GenerateEncounterDto) {
@@ -202,6 +204,7 @@ export class EncountersService {
 
   private async touchCampaign(campaignId: string) {
     await this.dataSource.getRepository(Campaign).increment({ id: campaignId }, 'version', 1);
+    this.gateway.emitCampaignChanged(campaignId, 'ENCOUNTER_STATUS_CHANGED');
   }
 
   private recommendedCr(averageLevel: number, partySize: number, intensity?: EncounterIntensity) {

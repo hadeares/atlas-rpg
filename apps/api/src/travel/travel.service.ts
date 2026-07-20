@@ -6,6 +6,7 @@ import { Campaign } from '../database/entities/campaign.entity';
 import { DayPeriod } from '../database/entities/day-period.enum';
 import { DiscoveryStatus, Hex } from '../database/entities/hex.entity';
 import { generateVisitState, HexLore } from '../hexes/generation/lore-generator';
+import { CampaignsGateway } from '../realtime/campaigns.gateway';
 import { setTravelWeather } from '../time/local-simulation';
 import { MovePartyDto } from './dto/move-party.dto';
 
@@ -22,13 +23,14 @@ const discoveryRank: Record<DiscoveryStatus, number> = {
 export class TravelService {
   constructor(
     private readonly campaignsService: CampaignsService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly gateway: CampaignsGateway
   ) {}
 
   async move(userId: string, campaignId: string, dto: MovePartyDto) {
     await this.campaignsService.ensureMaster(userId, campaignId);
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const campaign = await manager.getRepository(Campaign)
         .createQueryBuilder('campaign')
         .setLock('pessimistic_write')
@@ -76,12 +78,14 @@ export class TravelService {
 
       return { campaign, destination, changedHexes: [destination], visit: lastVisit };
     });
+    this.gateway.emitCampaignChanged(campaignId, 'PARTY_MOVED');
+    return result;
   }
 
   async explore(userId: string, campaignId: string) {
     await this.campaignsService.ensureMaster(userId, campaignId);
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const campaign = await manager.getRepository(Campaign)
         .createQueryBuilder('campaign')
         .setLock('pessimistic_write')
@@ -114,6 +118,8 @@ export class TravelService {
       }));
       return { campaign, hex, discovery };
     });
+    this.gateway.emitCampaignChanged(campaignId, 'HEX_EXPLORED');
+    return result;
   }
 }
 

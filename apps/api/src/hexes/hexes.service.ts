@@ -8,6 +8,7 @@ import { CampaignEvent } from '../database/entities/campaign-event.entity';
 import { Campaign } from '../database/entities/campaign.entity';
 import { CampaignMemberRole } from '../database/entities/campaign-member.entity';
 import { DiscoveryStatus, Hex } from '../database/entities/hex.entity';
+import { CampaignsGateway } from '../realtime/campaigns.gateway';
 import { UpdateHexLoreDto } from './dto/update-hex-lore.dto';
 import { UpdateHexDto } from './dto/update-hex.dto';
 import { generateHexLore, HexLore } from './generation/lore-generator';
@@ -23,7 +24,8 @@ export class HexesService implements OnModuleInit {
     private readonly eventsRepository: Repository<CampaignEvent>,
     private readonly campaignsService: CampaignsService,
     private readonly dataSource: DataSource,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
+    private readonly gateway: CampaignsGateway
   ) {}
 
   onModuleInit() {
@@ -262,6 +264,7 @@ export class HexesService implements OnModuleInit {
 
   private async touchCampaign(campaignId: string) {
     await this.dataSource.getRepository(Campaign).increment({ id: campaignId }, 'version', 1);
+    this.gateway.emitCampaignChanged(campaignId, 'HEX_UPDATED');
   }
 
   private toMapSummary(hex: Hex, isMaster: boolean) {

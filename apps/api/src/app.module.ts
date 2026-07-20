@@ -10,6 +10,7 @@ import { CreaturesModule } from './creatures/creatures.module';
 import { EncountersModule } from './encounters/encounters.module';
 import { HealthModule } from './health/health.module';
 import { HexesModule } from './hexes/hexes.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { TimeModule } from './time/time.module';
 import { TravelModule } from './travel/travel.module';
 import { UsersModule } from './users/users.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     CampaignsModule,
     HexesModule,
+    RealtimeModule,
     TimeModule,
     TravelModule,
     EncountersModule,

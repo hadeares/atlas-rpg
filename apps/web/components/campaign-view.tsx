@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiRequest } from '@/lib/api';
 import { clearSession, readSession } from '@/lib/auth';
+import { connectRealtimeSocket } from '@/lib/socket';
 import {
   AuthSession,
   Campaign,
@@ -136,13 +137,26 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
       if (!document.hidden) void refreshIfChanged();
     };
 
-    const interval = window.setInterval(() => void refreshIfChanged(), 1500);
+    // WebSocket entrega a mudança quase instantaneamente; o polling continua
+    // rodando bem mais devagar apenas como rede de segurança (proxy que
+    // bloqueia websocket, queda momentânea de conexão, etc.).
+    const socket = connectRealtimeSocket();
+    const handleConnect = () => socket.emit('campaign:join', campaignId);
+    const handleChanged = () => void refreshIfChanged();
+    socket.on('connect', handleConnect);
+    socket.on('campaign:changed', handleChanged);
+    if (socket.connected) handleConnect();
+
+    const interval = window.setInterval(() => void refreshIfChanged(), 8000);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       disposed = true;
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      socket.emit('campaign:leave', campaignId);
+      socket.off('connect', handleConnect);
+      socket.off('campaign:changed', handleChanged);
     };
   }, [authReady, campaign?.accessRole, campaignId]);
 

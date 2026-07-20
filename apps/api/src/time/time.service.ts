@@ -6,6 +6,7 @@ import { Campaign } from '../database/entities/campaign.entity';
 import { Hex } from '../database/entities/hex.entity';
 import { DayPeriod } from '../database/entities/day-period.enum';
 import { HexLore } from '../hexes/generation/lore-generator';
+import { CampaignsGateway } from '../realtime/campaigns.gateway';
 import { transitionLocalSimulation } from './local-simulation';
 
 const periodOrder = [DayPeriod.MANHA, DayPeriod.TARDE, DayPeriod.ANOITECER, DayPeriod.NOITE];
@@ -14,13 +15,14 @@ const periodOrder = [DayPeriod.MANHA, DayPeriod.TARDE, DayPeriod.ANOITECER, DayP
 export class TimeService {
   constructor(
     private readonly campaignsService: CampaignsService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly gateway: CampaignsGateway
   ) {}
 
   async advance(userId: string, campaignId: string, steps = 1) {
     await this.campaignsService.ensureMaster(userId, campaignId);
 
-    return this.dataSource.transaction(async (manager) => {
+    const savedCampaign = await this.dataSource.transaction(async (manager) => {
       const campaign = await manager
         .getRepository(Campaign)
         .createQueryBuilder('campaign')
@@ -63,5 +65,7 @@ export class TimeService {
       }));
       return savedCampaign;
     });
+    this.gateway.emitCampaignChanged(campaignId, 'TIME_ADVANCED');
+    return savedCampaign;
   }
 }
