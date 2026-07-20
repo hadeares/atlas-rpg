@@ -2023,3 +2023,57 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.print-sheet {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+
+  .print-sheet {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: 32px;
+    background: #fff;
+    color: #111;
+  }
+
+  .print-sheet h1 {
+    margin: 0 0 4px;
+    font-size: 1.5rem;
+  }
+
+  .print-sheet .print-meta {
+    margin: 0 0 20px;
+    color: #444;
+    font-size: 0.85rem;
+  }
+
+  .print-sheet section {
+    margin-bottom: 16px;
+    break-inside: avoid;
+  }
+
+  .print-sheet h2 {
+    margin: 0 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #ccc;
+    font-size: 1rem;
+  }
+
+  .print-sheet p,
+  .print-sheet li {
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+}

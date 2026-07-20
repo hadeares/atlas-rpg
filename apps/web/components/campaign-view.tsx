@@ -22,6 +22,7 @@ import { HexMap } from './hex-map';
 import { EncountersPanel } from './encounters-panel';
 import { DiceRoller } from './dice-roller';
 import { SessionLogTab } from './session-log-tab';
+import { PrintSheet } from './print-sheet';
 
 const periodLabels: Record<string, string> = {
   MANHA: 'Manhã',
@@ -615,6 +616,7 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
                 <h2>{selectedHex.publicName || selectedLore?.title || (selectedHex.biome === 'DESCONHECIDO' ? 'Território desconhecido' : formatEnum(selectedHex.biome))}</h2>
                 <span className={`status-badge status-${selectedHex.discoveryStatus.toLowerCase()}`}>{discoveryLabels[selectedHex.discoveryStatus]}</span>
                 {detailLoading && <small className="muted">Carregando detalhes...</small>}
+                {selectedLore && <button type="button" className="ghost-button compact-button" onClick={() => window.print()}>Exportar PDF</button>}
               </section>
 
               {selectedHex.discoveryStatus === 'DESCONHECIDO' && isPlayerView ? (
@@ -685,6 +687,8 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
           ) : <section className="sidebar-section"><p className="muted">Selecione um hexágono.</p></section>}
         </aside>
       </section>
+
+      {selectedHex && <PrintSheet hex={selectedHex} lore={selectedLore} />}
     </main>
   );
 }
