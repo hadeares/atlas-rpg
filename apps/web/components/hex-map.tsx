@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, PointerEvent as ReactPointerEvent, WheelEvent, useEffect, useMemo, useRef } from 'react';
+import { memo, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef } from 'react';
 import { HexData } from '@/lib/types';
 
 const hexSize = 34;
@@ -93,6 +93,7 @@ export const HexMap = memo(function HexMap({
   const viewRef = useRef<ViewState>({ zoom: 1, panX: 0, panY: 0 });
   const dragRef = useRef<DragState | null>(null);
   const drawRef = useRef<() => void>(() => undefined);
+  const wheelRef = useRef<(event: WheelEvent) => void>(() => undefined);
   const previousPartyPositionRef = useRef<string | null>(null);
 
   const geometry = useMemo<Geometry>(() => {
@@ -328,6 +329,16 @@ export const HexMap = memo(function HexMap({
     }
   }, [currentQ, currentR, playerView, geometry]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // O React registra wheel como listener passivo, onde preventDefault é
+    // ignorado; para segurar a rolagem durante o zoom precisamos do nativo.
+    const onWheel = (event: WheelEvent) => wheelRef.current(event);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, []);
+
   useEffect(() => () => {
     if (frameRef.current !== null) {
       cancelAnimationFrame(frameRef.current);
@@ -372,11 +383,17 @@ export const HexMap = memo(function HexMap({
     scheduleDraw();
   }
 
-  function handleWheel(event: WheelEvent<HTMLCanvasElement>) {
+  function handleWheel(event: WheelEvent) {
+    // Sem Ctrl/⌘ o gesto pertence à página: deixamos o scroll passar direto para
+    // não sequestrar a rolagem de quem só está percorrendo a tela. O pinch de
+    // trackpad chega como wheel com ctrlKey, então a pinça também dá zoom.
+    if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     const factor = Math.exp(-event.deltaY * 0.0014);
     zoomAt(viewRef.current.zoom * factor, event.clientX, event.clientY);
   }
+
+  wheelRef.current = handleWheel;
 
   function hitTest(clientX: number, clientY: number) {
     const canvas = canvasRef.current;
@@ -481,8 +498,7 @@ export const HexMap = memo(function HexMap({
         className="hex-map-canvas"
         role="img"
         tabIndex={0}
-        aria-label="Mapa hexagonal da campanha. Clique em um hexágono para selecioná-lo e arraste para navegar."
-        onWheel={handleWheel}
+        aria-label="Mapa hexagonal da campanha. Clique em um hexágono para selecioná-lo, arraste para navegar e use Ctrl com a roda do mouse para ampliar."
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
