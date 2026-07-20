@@ -118,6 +118,16 @@ export interface Campaign {
   currentWeather?: CampaignWeather | null;
 }
 
+export interface CampaignEventData {
+  id: string;
+  campaignId: string;
+  type: string;
+  day: number;
+  period: DayPeriod;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface CampaignLiveState {
   id: string;
   version: number;

@@ -21,6 +21,7 @@ import {
 import { HexMap } from './hex-map';
 import { EncountersPanel } from './encounters-panel';
 import { DiceRoller } from './dice-roller';
+import { SessionLogTab } from './session-log-tab';
 
 const periodLabels: Record<string, string> = {
   MANHA: 'Manhã',
@@ -38,7 +39,7 @@ const discoveryLabels: Record<DiscoveryStatus, string> = {
 };
 
 const discoveryOrder: DiscoveryStatus[] = ['DESCONHECIDO', 'AVISTADO', 'ATRAVESSADO', 'EXPLORADO', 'MAPEADO'];
-type LoreTab = 'BIBLIA' | 'RESUMO' | 'NARRACAO' | 'LOCAIS' | 'RECURSOS' | 'RUMORES' | 'FAUNA' | 'AMEACAS' | 'HISTORIA' | 'HORROR' | 'ENCONTROS' | 'MESTRE' | 'MEMBROS';
+type LoreTab = 'BIBLIA' | 'RESUMO' | 'NARRACAO' | 'LOCAIS' | 'RECURSOS' | 'RUMORES' | 'FAUNA' | 'AMEACAS' | 'HISTORIA' | 'HORROR' | 'ENCONTROS' | 'MESTRE' | 'MEMBROS' | 'HISTORICO';
 
 export function CampaignView({ campaignId }: { campaignId: string }) {
   const router = useRouter();
@@ -484,7 +485,7 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
 
   const tabs: LoreTab[] = ['RESUMO', 'NARRACAO', 'LOCAIS', 'RECURSOS', 'RUMORES', 'FAUNA', 'AMEACAS', 'HISTORIA', 'HORROR'];
   if (isMaster) tabs.unshift('BIBLIA');
-  if (isMaster) tabs.push('ENCONTROS', 'MESTRE', 'MEMBROS');
+  if (isMaster) tabs.push('ENCONTROS', 'MESTRE', 'HISTORICO', 'MEMBROS');
 
   return (
     <main className={`campaign-shell${isPlayerView ? ' player-view-shell' : ''}`}>
@@ -636,6 +637,7 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
                   {activeTab === 'HORROR' && <HorrorTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
                   {activeTab === 'ENCONTROS' && isMaster && <EncountersPanel campaignId={campaignId} hex={selectedHex} />}
                   {activeTab === 'MESTRE' && isMaster && <MasterTab lore={selectedLore} masterNotes={selectedHex.masterNotes} />}
+                  {activeTab === 'HISTORICO' && isMaster && <SessionLogTab campaignId={campaignId} />}
                   {activeTab === 'MEMBROS' && isMaster && (
                     <section className="sidebar-section member-panel">
                       <p className="helper-text">Qualquer pessoa pode criar uma conta em “Criar conta”. Depois, adicione o e-mail aqui como jogador ou mestre.</p>
@@ -903,6 +905,7 @@ function tabLabel(tab: LoreTab) {
     HORROR: 'HORROR',
     ENCONTROS: 'ENCONTROS',
     MESTRE: 'MESTRE',
+    HISTORICO: 'HISTÓRICO',
     MEMBROS: 'MEMBROS'
   };
   return labels[tab];

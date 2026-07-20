@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthUser } from '../common/auth-user.interface';
 import { CurrentUser } from '../common/current-user.decorator';
@@ -31,6 +31,11 @@ export class CampaignsController {
   @Get(':campaignId/live-state')
   getLiveState(@CurrentUser() user: AuthUser, @Param('campaignId') campaignId: string) {
     return this.campaignsService.getLiveState(user.userId, campaignId);
+  }
+
+  @Get(':campaignId/events')
+  listEvents(@CurrentUser() user: AuthUser, @Param('campaignId') campaignId: string, @Query('limit') limit?: string) {
+    return this.campaignsService.listEvents(user.userId, campaignId, limit ? Number(limit) : undefined);
   }
 
   @Patch(':campaignId')

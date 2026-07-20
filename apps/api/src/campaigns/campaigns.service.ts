@@ -196,6 +196,15 @@ export class CampaignsService implements OnModuleInit {
     });
   }
 
+  async listEvents(userId: string, campaignId: string, limit = 100) {
+    await this.ensureMaster(userId, campaignId);
+    return this.dataSource.getRepository(CampaignEvent).find({
+      where: { campaignId },
+      order: { createdAt: 'DESC' },
+      take: Math.min(200, Math.max(1, limit))
+    });
+  }
+
   async getLiveState(userId: string, campaignId: string): Promise<CampaignLiveState> {
     // TTL curto: essa rota é chamada pelo polling do frontend a cada 1.5s por
     // jogador conectado. Cachear por poucos segundos elimina boa parte dessas
