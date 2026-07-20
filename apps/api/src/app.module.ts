@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { RedisModule } from './cache/redis.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { DatabaseModule } from './database/database.module';
 import { CreaturesModule } from './creatures/creatures.module';
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
       envFilePath: ['apps/api/.env', '.env', '../../.env']
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
+    RedisModule,
     DatabaseModule,
     CreaturesModule,
     AuthModule,

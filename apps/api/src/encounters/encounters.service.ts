@@ -1,8 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CampaignsService } from '../campaigns/campaigns.service';
+import { Campaign } from '../database/entities/campaign.entity';
 import { CampaignEvent } from '../database/entities/campaign-event.entity';
 import { CreaturesService } from '../creatures/creatures.service';
 import { Hex } from '../database/entities/hex.entity';
@@ -31,7 +32,8 @@ export class EncountersService {
     @InjectRepository(CampaignEvent)
     private readonly eventsRepository: Repository<CampaignEvent>,
     private readonly campaignsService: CampaignsService,
-    private readonly creaturesService: CreaturesService
+    private readonly creaturesService: CreaturesService,
+    private readonly dataSource: DataSource
   ) {}
 
   async generate(userId: string, campaignId: string, dto: GenerateEncounterDto) {
@@ -194,7 +196,12 @@ export class EncountersService {
         status: encounter.status
       }
     }));
+    await this.touchCampaign(campaignId);
     return saved;
+  }
+
+  private async touchCampaign(campaignId: string) {
+    await this.dataSource.getRepository(Campaign).increment({ id: campaignId }, 'version', 1);
   }
 
   private recommendedCr(averageLevel: number, partySize: number, intensity?: EncounterIntensity) {

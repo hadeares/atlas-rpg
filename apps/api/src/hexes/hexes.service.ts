@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CampaignsService } from '../campaigns/campaigns.service';
@@ -21,10 +22,16 @@ export class HexesService implements OnModuleInit {
     @InjectRepository(CampaignEvent)
     private readonly eventsRepository: Repository<CampaignEvent>,
     private readonly campaignsService: CampaignsService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly config: ConfigService
   ) {}
 
   onModuleInit() {
+    if (this.config.get<string>('HEX_MAINTENANCE_ON_BOOT', 'true') !== 'true') {
+      this.logger.log('Manutenção de hexágonos no boot desativada (HEX_MAINTENANCE_ON_BOOT=false).');
+      return;
+    }
+
     void this.initializeHexData().catch((error: unknown) => {
       this.logger.error('Falha ao preparar os hexágonos.', error instanceof Error ? error.stack : String(error));
     });

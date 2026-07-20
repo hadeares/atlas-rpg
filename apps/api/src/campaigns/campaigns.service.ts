@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { CacheService } from '../cache/cache.service';
 import { CampaignEvent } from '../database/entities/campaign-event.entity';
 import { CampaignMember, CampaignMemberRole } from '../database/entities/campaign-member.entity';
 import { Campaign } from '../database/entities/campaign.entity';
@@ -38,7 +39,8 @@ export class CampaignsService implements OnModuleInit {
     private readonly membersRepository: Repository<CampaignMember>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly cache: CacheService
   ) {}
 
   async onModuleInit() {
@@ -195,16 +197,21 @@ export class CampaignsService implements OnModuleInit {
   }
 
   async getLiveState(userId: string, campaignId: string): Promise<CampaignLiveState> {
-    const access = await this.ensureAccess(userId, campaignId);
-    return {
-      id: access.campaign.id,
-      version: access.campaign.version,
-      currentDay: access.campaign.currentDay,
-      currentPeriod: access.campaign.currentPeriod,
-      currentQ: access.campaign.currentQ,
-      currentR: access.campaign.currentR,
-      updatedAt: access.campaign.updatedAt
-    };
+    // TTL curto: essa rota é chamada pelo polling do frontend a cada 1.5s por
+    // jogador conectado. Cachear por poucos segundos elimina boa parte dessas
+    // consultas repetidas sem arriscar dados desatualizados de forma relevante.
+    return this.cache.getOrSet(`live-state:${campaignId}:${userId}`, 2, async () => {
+      const access = await this.ensureAccess(userId, campaignId);
+      return {
+        id: access.campaign.id,
+        version: access.campaign.version,
+        currentDay: access.campaign.currentDay,
+        currentPeriod: access.campaign.currentPeriod,
+        currentQ: access.campaign.currentQ,
+        currentR: access.campaign.currentR,
+        updatedAt: access.campaign.updatedAt
+      };
+    });
   }
 
   async update(userId: string, campaignId: string, dto: UpdateCampaignDto) {
