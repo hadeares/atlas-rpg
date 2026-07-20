@@ -196,7 +196,16 @@ O mundo não destrói assentamentos, movimenta monstros importantes ou espalha o
 - informações secretas filtradas pela API;
 - edição e regeneração da lore;
 - encontros secretos persistentes;
-- catálogo de criaturas SRD, originais e personalizadas.
+- catálogo de criaturas SRD, originais e personalizadas;
+- variedade de bioma por terreno e deduplicação regional de nomes de marco/monstro;
+- clima dinâmico da campanha visível na barra superior;
+- filtro de mapa por perigo e bioma (mestre);
+- colaboração em tempo real via WebSocket (substitui o polling para jogadores conectados);
+- rolador de dados compartilhado com histórico ao vivo;
+- rastreador de iniciativa/combate por encontro;
+- log de sessão (histórico legível de eventos da campanha) para o mestre;
+- exportação de hexágono em PDF via impressão do navegador;
+- entrada em campanha por código de convite.
 
 ## Requisitos
 
@@ -396,6 +405,8 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 Isso inicia o Postgres e o Redis apenas na rede interna do compose (não expostos ao host) e publica a API na porta `3333`. Coloque um proxy reverso (Nginx, Caddy, Traefik) na frente para TLS e o domínio público.
+
+A API expõe um WebSocket (`/realtime`, usado pela colaboração em tempo real e pelo rolador de dados). Garanta que o proxy reverso repasse os cabeçalhos `Upgrade`/`Connection` para essa rota (em Nginx, `proxy_set_header Upgrade $http_upgrade;` e `proxy_set_header Connection "upgrade";`); a maioria dos PaaS já suporta isso nativamente.
 
 No boot, a API roda as migrations automaticamente (`DB_RUN_MIGRATIONS=true` já configurado no compose de produção). Para produção **não** use `DB_SYNCHRONIZE=true` — o schema é controlado por migrations versionadas em `apps/api/src/database/migrations`.
 
