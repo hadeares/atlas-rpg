@@ -73,6 +73,28 @@ export class CampaignsGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (typeof campaignId === 'string' && campaignId) await client.leave(this.room(campaignId));
   }
 
+  /**
+   * Rolagem de dados é só um efeito colateral cosmético compartilhado com a
+   * mesa: o servidor apenas retransmite para quem já está na sala (não há
+   * dado sensível nem persistência aqui).
+   */
+  @SubscribeMessage('dice:roll')
+  handleDiceRoll(@ConnectedSocket() client: Socket, @MessageBody() payload: unknown) {
+    if (!payload || typeof payload !== 'object') return;
+    const { campaignId, notation, total, rolls, rolledBy } = payload as Record<string, unknown>;
+    if (typeof campaignId !== 'string' || !client.rooms.has(this.room(campaignId))) return;
+    if (typeof notation !== 'string' || typeof total !== 'number' || !Array.isArray(rolls)) return;
+
+    this.server.to(this.room(campaignId)).emit('dice:rolled', {
+      campaignId,
+      notation: notation.slice(0, 40),
+      total,
+      rolls,
+      rolledBy: typeof rolledBy === 'string' ? rolledBy.slice(0, 60) : 'Alguém',
+      at: new Date().toISOString()
+    });
+  }
+
   /** Notifica todos na sala que a campanha mudou; o cliente decide se refaz o fetch. */
   emitCampaignChanged(campaignId: string, reason: string) {
     this.server?.to(this.room(campaignId)).emit('campaign:changed', { campaignId, reason, at: new Date().toISOString() });

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiRequest } from '@/lib/api';
 import { clearSession, readSession } from '@/lib/auth';
-import { connectRealtimeSocket } from '@/lib/socket';
+import { connectRealtimeSocket, getRealtimeSocket } from '@/lib/socket';
 import {
   AuthSession,
   Campaign,
@@ -20,6 +20,7 @@ import {
 } from '@/lib/types';
 import { HexMap } from './hex-map';
 import { EncountersPanel } from './encounters-panel';
+import { DiceRoller } from './dice-roller';
 
 const periodLabels: Record<string, string> = {
   MANHA: 'Manhã',
@@ -115,6 +116,22 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
     }
   }, [activeTab, campaign?.accessRole]);
 
+  // Conecta e entra na sala da campanha para qualquer papel (mestre e
+  // jogador), já que o rolador de dados e o rastreador de combate usam o
+  // mesmo socket independentemente de quem está olhando o polling de estado.
+  useEffect(() => {
+    if (!authReady || !campaign) return;
+    const socket = connectRealtimeSocket();
+    const handleConnect = () => socket.emit('campaign:join', campaignId);
+    socket.on('connect', handleConnect);
+    if (socket.connected) handleConnect();
+
+    return () => {
+      socket.emit('campaign:leave', campaignId);
+      socket.off('connect', handleConnect);
+    };
+  }, [authReady, campaign?.id, campaignId]);
+
   useEffect(() => {
     if (!authReady || campaign?.accessRole !== 'PLAYER') return;
 
@@ -140,12 +157,9 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
     // WebSocket entrega a mudança quase instantaneamente; o polling continua
     // rodando bem mais devagar apenas como rede de segurança (proxy que
     // bloqueia websocket, queda momentânea de conexão, etc.).
-    const socket = connectRealtimeSocket();
-    const handleConnect = () => socket.emit('campaign:join', campaignId);
+    const socket = getRealtimeSocket();
     const handleChanged = () => void refreshIfChanged();
-    socket.on('connect', handleConnect);
     socket.on('campaign:changed', handleChanged);
-    if (socket.connected) handleConnect();
 
     const interval = window.setInterval(() => void refreshIfChanged(), 8000);
     document.addEventListener('visibilitychange', handleVisibility);
@@ -154,8 +168,6 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
       disposed = true;
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
-      socket.emit('campaign:leave', campaignId);
-      socket.off('connect', handleConnect);
       socket.off('campaign:changed', handleChanged);
     };
   }, [authReady, campaign?.accessRole, campaignId]);
@@ -494,6 +506,7 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
             </div>
           )}
           {isMaster && <button className="primary-button compact-button" onClick={() => void advancePeriod()} disabled={busy}>Avançar período</button>}
+          {session?.user && <DiceRoller campaignId={campaignId} displayName={session.user.displayName} />}
           {session?.user.role === 'ADMIN' && <Link className="ghost-button button-link" href="/users">Usuários</Link>}
           <button className="ghost-button" onClick={logout}>Sair</button>
         </div>
