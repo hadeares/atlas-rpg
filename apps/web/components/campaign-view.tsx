@@ -20,6 +20,8 @@ import {
 } from '@/lib/types';
 import { HexMap } from './hex-map';
 import { EncountersPanel } from './encounters-panel';
+import { DiceProvider } from './dice-context';
+import { DiceFeed } from './dice-feed';
 import { DiceRoller } from './dice-roller';
 import { SessionLogTab } from './session-log-tab';
 import { PrintSheet } from './print-sheet';
@@ -503,216 +505,219 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
   if (isMaster) tabs.push('ENCONTROS', 'MESTRE', 'HISTORICO', 'MEMBROS');
 
   return (
-    <main className={`campaign-shell${isPlayerView ? ' player-view-shell' : ''}`}>
-      <header className="campaign-topbar">
-        <div className="campaign-title-area">
-          <Link className="back-link" href="/campaigns">← Campanhas</Link>
-          <div>
-            <p className="eyebrow">{isPlayerView ? 'Visão dos jogadores' : 'Mesa do mestre'}</p>
-            <h1>{campaign.name}</h1>
-          </div>
-        </div>
-        <div className="time-controls">
-          <div className="time-display"><span>Dia</span><strong>{campaign.currentDay}</strong></div>
-          <div className="time-display"><span>Período</span><strong>{periodLabels[campaign.currentPeriod]}</strong></div>
-          {campaign.currentWeather && (
-            <div className="time-display weather-display" title={`Visibilidade ${campaign.currentWeather.visibility.toLowerCase()}`}>
-              <span>Clima</span>
-              <strong>{campaign.currentWeather.condition}</strong>
+    <DiceProvider campaignId={campaignId} displayName={session?.user.displayName ?? ''}>
+      <main className={`campaign-shell${isPlayerView ? ' player-view-shell' : ''}`}>
+        <header className="campaign-topbar">
+          <div className="campaign-title-area">
+            <Link className="back-link" href="/campaigns">← Campanhas</Link>
+            <div>
+              <p className="eyebrow">{isPlayerView ? 'Visão dos jogadores' : 'Mesa do mestre'}</p>
+              <h1>{campaign.name}</h1>
             </div>
-          )}
-          {isMaster && <button className="primary-button compact-button" onClick={() => void advancePeriod()} disabled={busy}>Avançar período</button>}
-          {session?.user && <DiceRoller campaignId={campaignId} displayName={session.user.displayName} />}
-          {session?.user.role === 'ADMIN' && <Link className="ghost-button button-link" href="/users">Usuários</Link>}
-          <button className="ghost-button" onClick={logout}>Sair</button>
-        </div>
-      </header>
-
-      {error && <p className="global-error">{error}</p>}
-      {visit && (
-        <section className="visit-banner">
-          <div>
-            <p className="eyebrow">Resultado da travessia</p>
-            <h3>{visit.encounter?.title ?? 'Travessia concluída'}</h3>
-            <p>{visit.description || visit.encounter?.text || 'O grupo concluiu a travessia.'}</p>
-            {visit.consequence && isMaster && <small className="secret-line">Consequência: {visit.consequence}</small>}
           </div>
-          <div className="visit-tags">{visit.weather && <span>{visit.weather}</span>}{visit.visibility && <span>Visibilidade {visit.visibility.toLowerCase()}</span>}</div>
-          <button className="ghost-button" onClick={() => setVisit(null)}>Fechar</button>
-        </section>
-      )}
+          <div className="time-controls">
+            <div className="time-display"><span>Dia</span><strong>{campaign.currentDay}</strong></div>
+            <div className="time-display"><span>Período</span><strong>{periodLabels[campaign.currentPeriod]}</strong></div>
+            {campaign.currentWeather && (
+              <div className="time-display weather-display" title={`Visibilidade ${campaign.currentWeather.visibility.toLowerCase()}`}>
+                <span>Clima</span>
+                <strong>{campaign.currentWeather.condition}</strong>
+              </div>
+            )}
+            {isMaster && <button className="primary-button compact-button" onClick={() => void advancePeriod()} disabled={busy}>Avançar período</button>}
+            {session?.user && <DiceRoller />}
+            {session?.user.role === 'ADMIN' && <Link className="ghost-button button-link" href="/users">Usuários</Link>}
+            <button className="ghost-button" onClick={logout}>Sair</button>
+          </div>
+        </header>
 
-      <section className="campaign-layout">
-        <aside className="campaign-sidebar left-sidebar">
-          <section className="sidebar-section">
-            <p className="eyebrow">Expedição</p>
-            <dl className="info-list">
-              <div><dt>Posição</dt><dd>{campaign.currentQ}, {campaign.currentR}</dd></div>
-              <div><dt>Conhecidos</dt><dd>{isPlayerView ? discoveredCount : `${discoveredCount}/${hexes.length}`}</dd></div>
-              <div><dt>Participantes</dt><dd>{campaign.memberCount}</dd></div>
-              <div><dt>Acesso</dt><dd>{isMaster ? 'Mestre' : 'Jogador'}</dd></div>
-            </dl>
+        {error && <p className="global-error">{error}</p>}
+        {visit && (
+          <section className="visit-banner">
+            <div>
+              <p className="eyebrow">Resultado da travessia</p>
+              <h3>{visit.encounter?.title ?? 'Travessia concluída'}</h3>
+              <p>{visit.description || visit.encounter?.text || 'O grupo concluiu a travessia.'}</p>
+              {visit.consequence && isMaster && <small className="secret-line">Consequência: {visit.consequence}</small>}
+            </div>
+            <div className="visit-tags">{visit.weather && <span>{visit.weather}</span>}{visit.visibility && <span>Visibilidade {visit.visibility.toLowerCase()}</span>}</div>
+            <button className="ghost-button" onClick={() => setVisit(null)}>Fechar</button>
           </section>
+        )}
 
-          {isMaster && selectedHex && (
-            <section className="sidebar-section action-stack">
-              <p className="eyebrow">Ações</p>
-              <button className="primary-button" onClick={() => void moveParty()} disabled={!canMove || busy}>Mover grupo para cá</button>
-              <button className="ghost-button" onClick={() => void exploreCurrentHex()} disabled={!isCurrentHex || busy}>Explorar hexágono atual</button>
-              <button className="ghost-button" onClick={() => setActiveTab('ENCONTROS')} disabled={busy}>Gerar encontro secreto</button>
-              <button className="ghost-button" onClick={() => setActiveTab('BIBLIA')} disabled={busy}>Abrir Bíblia da campanha</button>
-              {!canMove && !isCurrentHex && <p className="helper-text">Escolha um hexágono adjacente à posição do grupo.</p>}
-            </section>
-          )}
-
-          {isMaster && (
+        <section className="campaign-layout">
+          <aside className="campaign-sidebar left-sidebar">
             <section className="sidebar-section">
-              <p className="eyebrow">Filtro do mapa</p>
-              <label>Perigo
-                <select value={dangerFilter} onChange={(event) => setDangerFilter(event.target.value as typeof dangerFilter)}>
-                  <option value="ALL">Todos</option>
-                  <option value="BAIXO">Baixo (1-3)</option>
-                  <option value="MEDIO">Médio (4-6)</option>
-                  <option value="ALTO">Alto (7-10)</option>
-                </select>
-              </label>
-              <label>Bioma
-                <select value={biomeFilter} onChange={(event) => setBiomeFilter(event.target.value)}>
-                  <option value="ALL">Todos</option>
-                  {availableBiomes.map((biome) => (
-                    <option key={biome} value={biome}>{formatEnum(biome)}</option>
-                  ))}
-                </select>
-              </label>
-              {(dangerFilter !== 'ALL' || biomeFilter !== 'ALL') && (
-                <button className="ghost-button compact-button" onClick={() => { setDangerFilter('ALL'); setBiomeFilter('ALL'); }}>Limpar filtro</button>
-              )}
+              <p className="eyebrow">Expedição</p>
+              <dl className="info-list">
+                <div><dt>Posição</dt><dd>{campaign.currentQ}, {campaign.currentR}</dd></div>
+                <div><dt>Conhecidos</dt><dd>{isPlayerView ? discoveredCount : `${discoveredCount}/${hexes.length}`}</dd></div>
+                <div><dt>Participantes</dt><dd>{campaign.memberCount}</dd></div>
+                <div><dt>Acesso</dt><dd>{isMaster ? 'Mestre' : 'Jogador'}</dd></div>
+              </dl>
             </section>
-          )}
 
-          <section className="sidebar-section">
-            <p className="eyebrow">Legenda</p>
-            <div className="legend-list">
-              {isMaster && <Legend color="#383d3f" label="Não percorrido" />}
-              <Legend color="#7b8063" label="Planície conhecida" />
-              <Legend color="#425d48" label="Floresta" />
-              <Legend color="#67666c" label="Montanha" />
-              <Legend color="#495b55" label="Pântano" />
-              <Legend color="#6c5a58" label="Ruínas" />
-              <Legend color="#57435e" label="Contaminado" />
+            {isMaster && selectedHex && (
+              <section className="sidebar-section action-stack">
+                <p className="eyebrow">Ações</p>
+                <button className="primary-button" onClick={() => void moveParty()} disabled={!canMove || busy}>Mover grupo para cá</button>
+                <button className="ghost-button" onClick={() => void exploreCurrentHex()} disabled={!isCurrentHex || busy}>Explorar hexágono atual</button>
+                <button className="ghost-button" onClick={() => setActiveTab('ENCONTROS')} disabled={busy}>Gerar encontro secreto</button>
+                <button className="ghost-button" onClick={() => setActiveTab('BIBLIA')} disabled={busy}>Abrir Bíblia da campanha</button>
+                {!canMove && !isCurrentHex && <p className="helper-text">Escolha um hexágono adjacente à posição do grupo.</p>}
+              </section>
+            )}
+
+            {isMaster && (
+              <section className="sidebar-section">
+                <p className="eyebrow">Filtro do mapa</p>
+                <label>Perigo
+                  <select value={dangerFilter} onChange={(event) => setDangerFilter(event.target.value as typeof dangerFilter)}>
+                    <option value="ALL">Todos</option>
+                    <option value="BAIXO">Baixo (1-3)</option>
+                    <option value="MEDIO">Médio (4-6)</option>
+                    <option value="ALTO">Alto (7-10)</option>
+                  </select>
+                </label>
+                <label>Bioma
+                  <select value={biomeFilter} onChange={(event) => setBiomeFilter(event.target.value)}>
+                    <option value="ALL">Todos</option>
+                    {availableBiomes.map((biome) => (
+                      <option key={biome} value={biome}>{formatEnum(biome)}</option>
+                    ))}
+                  </select>
+                </label>
+                {(dangerFilter !== 'ALL' || biomeFilter !== 'ALL') && (
+                  <button className="ghost-button compact-button" onClick={() => { setDangerFilter('ALL'); setBiomeFilter('ALL'); }}>Limpar filtro</button>
+                )}
+              </section>
+            )}
+
+            <section className="sidebar-section">
+              <p className="eyebrow">Legenda</p>
+              <div className="legend-list">
+                {isMaster && <Legend color="#383d3f" label="Não percorrido" />}
+                <Legend color="#7b8063" label="Planície conhecida" />
+                <Legend color="#425d48" label="Floresta" />
+                <Legend color="#67666c" label="Montanha" />
+                <Legend color="#495b55" label="Pântano" />
+                <Legend color="#6c5a58" label="Ruínas" />
+                <Legend color="#57435e" label="Contaminado" />
+              </div>
+            </section>
+          </aside>
+
+          <section className="map-panel">
+            <div className="map-toolbar">
+              <div><p className="eyebrow">Mapa persistente</p><h2>{isPlayerView ? 'Terras conhecidas' : 'Região completa'}</h2></div>
+              <div className="map-toolbar-status">
+                {isPlayerView && <span className="live-sync-indicator"><i /> Atualização automática</span>}
+                <span className="map-hint">Clique para selecionar. Arraste para mover. Use a roda para ampliar.</span>
+              </div>
             </div>
+            <HexMap
+              hexes={visibleHexes}
+              selectedHex={selectedHex}
+              currentQ={campaign.currentQ}
+              currentR={campaign.currentR}
+              playerView={isPlayerView}
+              onSelect={(hex) => void selectHex(hex)}
+            />
           </section>
-        </aside>
 
-        <section className="map-panel">
-          <div className="map-toolbar">
-            <div><p className="eyebrow">Mapa persistente</p><h2>{isPlayerView ? 'Terras conhecidas' : 'Região completa'}</h2></div>
-            <div className="map-toolbar-status">
-              {isPlayerView && <span className="live-sync-indicator"><i /> Atualização automática</span>}
-              <span className="map-hint">Clique para selecionar. Arraste para mover. Use a roda para ampliar.</span>
-            </div>
-          </div>
-          <HexMap
-            hexes={visibleHexes}
-            selectedHex={selectedHex}
-            currentQ={campaign.currentQ}
-            currentR={campaign.currentR}
-            playerView={isPlayerView}
-            onSelect={(hex) => void selectHex(hex)}
-          />
+          <aside className="campaign-sidebar right-sidebar lore-sidebar">
+            {selectedHex ? (
+              <>
+                <section className="sidebar-section hex-header">
+                  <p className="eyebrow">Hexágono {selectedHex.q}, {selectedHex.r}</p>
+                  <h2>{selectedHex.publicName || selectedLore?.title || (selectedHex.biome === 'DESCONHECIDO' ? 'Território desconhecido' : formatEnum(selectedHex.biome))}</h2>
+                  <span className={`status-badge status-${selectedHex.discoveryStatus.toLowerCase()}`}>{discoveryLabels[selectedHex.discoveryStatus]}</span>
+                  {detailLoading && <small className="muted">Carregando detalhes...</small>}
+                  {selectedLore && <button type="button" className="ghost-button compact-button" onClick={() => window.print()}>Exportar PDF</button>}
+                </section>
+
+                {selectedHex.discoveryStatus === 'DESCONHECIDO' && isPlayerView ? (
+                  <section className="sidebar-section unknown-panel"><h3>Névoa de guerra</h3><p>O grupo ainda não possui informações confiáveis sobre este lugar.</p></section>
+                ) : (
+                  <>
+                    <nav className="lore-tabs">
+                      {tabs.map((tab) => <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tabLabel(tab)}</button>)}
+                    </nav>
+
+                    {activeTab === 'BIBLIA' && isMaster && <CampaignBibleTab campaign={campaign} onCopy={copyNarration} />}
+                    {activeTab === 'RESUMO' && <SummaryTab lore={selectedLore} hex={selectedHex} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'NARRACAO' && <NarrationTab lore={selectedLore} onCopy={copyNarration} />}
+                    {activeTab === 'LOCAIS' && <LocationsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'RECURSOS' && <ResourcesTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'RUMORES' && <RumorsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'FAUNA' && <NatureTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'AMEACAS' && <ThreatsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'HISTORIA' && <HistoryTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'HORROR' && <HorrorTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
+                    {activeTab === 'ENCONTROS' && isMaster && <EncountersPanel campaignId={campaignId} hex={selectedHex} />}
+                    {activeTab === 'MESTRE' && isMaster && <MasterTab lore={selectedLore} masterNotes={selectedHex.masterNotes} />}
+                    {activeTab === 'HISTORICO' && isMaster && <SessionLogTab campaignId={campaignId} />}
+                    {activeTab === 'MEMBROS' && isMaster && (
+                      <section className="sidebar-section member-panel">
+                        {campaign.inviteCode && (
+                          <div className="invite-code-box">
+                            <div><span className="eyebrow">Código de convite</span><strong>{campaign.inviteCode}</strong></div>
+                            <div className="row-actions">
+                              <button type="button" className="ghost-button mini-button" onClick={() => navigator.clipboard.writeText(campaign.inviteCode ?? '')}>Copiar</button>
+                              <button type="button" className="ghost-button mini-button" disabled={busy} onClick={() => void regenerateInviteCode()}>Gerar novo</button>
+                            </div>
+                          </div>
+                        )}
+                        <p className="helper-text">Compartilhe o código acima para que jogadores entrem sozinhos em “Entrar com código”, ou adicione o e-mail manualmente abaixo.</p>
+                        <form className="form-stack" onSubmit={addMember}>
+                          <label>E-mail do usuário<input type="email" value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} required /></label>
+                          <label>Função<select value={memberRole} onChange={(event) => setMemberRole(event.target.value as 'MASTER' | 'PLAYER')}><option value="PLAYER">Jogador</option><option value="MASTER">Mestre</option></select></label>
+                          <button className="primary-button" disabled={busy}>Adicionar à campanha</button>
+                        </form>
+                        <div className="member-list">
+                          {members.map((member) => (
+                            <article className="member-card" key={member.id}>
+                              <div><strong>{member.displayName}</strong><small>{member.email}</small></div>
+                              <select value={member.role} disabled={member.userId === campaign.ownerId || busy} onChange={(event) => void changeMemberRole(member, event.target.value as 'MASTER' | 'PLAYER')}><option value="PLAYER">Jogador</option><option value="MASTER">Mestre</option></select>
+                              {member.userId !== campaign.ownerId && <button className="danger-button" onClick={() => void removeMember(member)} disabled={busy}>Remover</button>}
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {isMaster && activeTab !== 'MEMBROS' && activeTab !== 'ENCONTROS' && activeTab !== 'BIBLIA' && (
+                      <section className="sidebar-section editor-panel">
+                        <details>
+                          <summary>Editar dados e lore</summary>
+                          <div className="form-stack compact-form">
+                            <label>Nome público<input value={publicName} onChange={(event) => setPublicName(event.target.value)} /></label>
+                            <label>Notas do mestre<textarea value={masterNotes} onChange={(event) => setMasterNotes(event.target.value)} rows={4} /></label>
+                            <div className="status-grid">{discoveryOrder.map((status) => <button key={status} className={selectedHex.discoveryStatus === status ? 'status-button active' : 'status-button'} onClick={() => void saveHex(status)} disabled={busy}>{discoveryLabels[status]}</button>)}</div>
+                            <button className="primary-button" onClick={() => void saveHex()} disabled={busy}>Salvar hexágono</button>
+                            <hr />
+                            <label>Título da lore<input value={loreTitle} onChange={(event) => setLoreTitle(event.target.value)} /></label>
+                            <label>Resumo<textarea value={loreOverview} onChange={(event) => setLoreOverview(event.target.value)} rows={5} /></label>
+                            <label>História<textarea value={loreHistory} onChange={(event) => setLoreHistory(event.target.value)} rows={5} /></label>
+                            <label>Resumo para jogadores<textarea value={lorePlayerSummary} onChange={(event) => setLorePlayerSummary(event.target.value)} rows={4} /></label>
+                            <label>Segredo central<textarea value={loreSecrets} onChange={(event) => setLoreSecrets(event.target.value)} rows={5} /></label>
+                            <button className="primary-button" onClick={() => void saveLore()} disabled={busy}>Salvar lore</button>
+                            <button className="ghost-button" onClick={() => void regenerateLore()} disabled={busy}>Regenerar lore completa</button>
+                          </div>
+                        </details>
+                      </section>
+                    )}
+                  </>
+                )}
+              </>
+            ) : <section className="sidebar-section"><p className="muted">Selecione um hexágono.</p></section>}
+          </aside>
         </section>
 
-        <aside className="campaign-sidebar right-sidebar lore-sidebar">
-          {selectedHex ? (
-            <>
-              <section className="sidebar-section hex-header">
-                <p className="eyebrow">Hexágono {selectedHex.q}, {selectedHex.r}</p>
-                <h2>{selectedHex.publicName || selectedLore?.title || (selectedHex.biome === 'DESCONHECIDO' ? 'Território desconhecido' : formatEnum(selectedHex.biome))}</h2>
-                <span className={`status-badge status-${selectedHex.discoveryStatus.toLowerCase()}`}>{discoveryLabels[selectedHex.discoveryStatus]}</span>
-                {detailLoading && <small className="muted">Carregando detalhes...</small>}
-                {selectedLore && <button type="button" className="ghost-button compact-button" onClick={() => window.print()}>Exportar PDF</button>}
-              </section>
-
-              {selectedHex.discoveryStatus === 'DESCONHECIDO' && isPlayerView ? (
-                <section className="sidebar-section unknown-panel"><h3>Névoa de guerra</h3><p>O grupo ainda não possui informações confiáveis sobre este lugar.</p></section>
-              ) : (
-                <>
-                  <nav className="lore-tabs">
-                    {tabs.map((tab) => <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tabLabel(tab)}</button>)}
-                  </nav>
-
-                  {activeTab === 'BIBLIA' && isMaster && <CampaignBibleTab campaign={campaign} onCopy={copyNarration} />}
-                  {activeTab === 'RESUMO' && <SummaryTab lore={selectedLore} hex={selectedHex} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'NARRACAO' && <NarrationTab lore={selectedLore} onCopy={copyNarration} />}
-                  {activeTab === 'LOCAIS' && <LocationsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'RECURSOS' && <ResourcesTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'RUMORES' && <RumorsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'FAUNA' && <NatureTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'AMEACAS' && <ThreatsTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'HISTORIA' && <HistoryTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'HORROR' && <HorrorTab lore={selectedLore} isMaster={Boolean(isMaster)} />}
-                  {activeTab === 'ENCONTROS' && isMaster && <EncountersPanel campaignId={campaignId} hex={selectedHex} />}
-                  {activeTab === 'MESTRE' && isMaster && <MasterTab lore={selectedLore} masterNotes={selectedHex.masterNotes} />}
-                  {activeTab === 'HISTORICO' && isMaster && <SessionLogTab campaignId={campaignId} />}
-                  {activeTab === 'MEMBROS' && isMaster && (
-                    <section className="sidebar-section member-panel">
-                      {campaign.inviteCode && (
-                        <div className="invite-code-box">
-                          <div><span className="eyebrow">Código de convite</span><strong>{campaign.inviteCode}</strong></div>
-                          <div className="row-actions">
-                            <button type="button" className="ghost-button mini-button" onClick={() => navigator.clipboard.writeText(campaign.inviteCode ?? '')}>Copiar</button>
-                            <button type="button" className="ghost-button mini-button" disabled={busy} onClick={() => void regenerateInviteCode()}>Gerar novo</button>
-                          </div>
-                        </div>
-                      )}
-                      <p className="helper-text">Compartilhe o código acima para que jogadores entrem sozinhos em “Entrar com código”, ou adicione o e-mail manualmente abaixo.</p>
-                      <form className="form-stack" onSubmit={addMember}>
-                        <label>E-mail do usuário<input type="email" value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} required /></label>
-                        <label>Função<select value={memberRole} onChange={(event) => setMemberRole(event.target.value as 'MASTER' | 'PLAYER')}><option value="PLAYER">Jogador</option><option value="MASTER">Mestre</option></select></label>
-                        <button className="primary-button" disabled={busy}>Adicionar à campanha</button>
-                      </form>
-                      <div className="member-list">
-                        {members.map((member) => (
-                          <article className="member-card" key={member.id}>
-                            <div><strong>{member.displayName}</strong><small>{member.email}</small></div>
-                            <select value={member.role} disabled={member.userId === campaign.ownerId || busy} onChange={(event) => void changeMemberRole(member, event.target.value as 'MASTER' | 'PLAYER')}><option value="PLAYER">Jogador</option><option value="MASTER">Mestre</option></select>
-                            {member.userId !== campaign.ownerId && <button className="danger-button" onClick={() => void removeMember(member)} disabled={busy}>Remover</button>}
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {isMaster && activeTab !== 'MEMBROS' && activeTab !== 'ENCONTROS' && activeTab !== 'BIBLIA' && (
-                    <section className="sidebar-section editor-panel">
-                      <details>
-                        <summary>Editar dados e lore</summary>
-                        <div className="form-stack compact-form">
-                          <label>Nome público<input value={publicName} onChange={(event) => setPublicName(event.target.value)} /></label>
-                          <label>Notas do mestre<textarea value={masterNotes} onChange={(event) => setMasterNotes(event.target.value)} rows={4} /></label>
-                          <div className="status-grid">{discoveryOrder.map((status) => <button key={status} className={selectedHex.discoveryStatus === status ? 'status-button active' : 'status-button'} onClick={() => void saveHex(status)} disabled={busy}>{discoveryLabels[status]}</button>)}</div>
-                          <button className="primary-button" onClick={() => void saveHex()} disabled={busy}>Salvar hexágono</button>
-                          <hr />
-                          <label>Título da lore<input value={loreTitle} onChange={(event) => setLoreTitle(event.target.value)} /></label>
-                          <label>Resumo<textarea value={loreOverview} onChange={(event) => setLoreOverview(event.target.value)} rows={5} /></label>
-                          <label>História<textarea value={loreHistory} onChange={(event) => setLoreHistory(event.target.value)} rows={5} /></label>
-                          <label>Resumo para jogadores<textarea value={lorePlayerSummary} onChange={(event) => setLorePlayerSummary(event.target.value)} rows={4} /></label>
-                          <label>Segredo central<textarea value={loreSecrets} onChange={(event) => setLoreSecrets(event.target.value)} rows={5} /></label>
-                          <button className="primary-button" onClick={() => void saveLore()} disabled={busy}>Salvar lore</button>
-                          <button className="ghost-button" onClick={() => void regenerateLore()} disabled={busy}>Regenerar lore completa</button>
-                        </div>
-                      </details>
-                    </section>
-                  )}
-                </>
-              )}
-            </>
-          ) : <section className="sidebar-section"><p className="muted">Selecione um hexágono.</p></section>}
-        </aside>
-      </section>
-
-      {selectedHex && <PrintSheet hex={selectedHex} lore={selectedLore} />}
-    </main>
+        {selectedHex && <PrintSheet hex={selectedHex} lore={selectedLore} />}
+        {session?.user && <DiceFeed />}
+      </main>
+    </DiceProvider>
   );
 }
 

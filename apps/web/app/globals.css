@@ -1928,6 +1928,173 @@ select:focus {
   color: #9da6a0;
 }
 
+/* Feed de rolagens: flutua acima do layout para ficar sempre à vista, mas
+   abaixo do backdrop dos modais (z-index 1000) para não cobri-los. */
+.dice-feed {
+  position: fixed;
+  z-index: 900;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  width: min(310px, calc(100vw - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(17, 21, 24, 0.96);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.dice-feed-header {
+  border-bottom: 1px solid transparent;
+}
+
+.dice-feed.is-open .dice-feed-header {
+  border-bottom-color: var(--border);
+}
+
+.dice-feed-toggle {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: var(--text);
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dice-feed-title {
+  flex: 1;
+  text-align: left;
+}
+
+.dice-feed-badge {
+  min-width: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #14181a;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.dice-feed-chevron {
+  color: var(--muted);
+}
+
+.dice-feed-collapsed {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 12px;
+  margin: 0;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dice-feed-collapsed strong {
+  color: var(--accent-strong);
+}
+
+.dice-feed-list {
+  display: grid;
+  gap: 2px;
+  max-height: min(340px, 45vh);
+  overflow-y: auto;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+}
+
+.dice-feed-empty {
+  color: var(--muted);
+  padding: 10px 6px;
+  font-size: 0.78rem;
+}
+
+.dice-feed-line {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border-radius: 8px;
+  padding: 7px 8px;
+}
+
+.dice-feed-list li:nth-child(odd) .dice-feed-line {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.dice-feed-line > strong {
+  min-width: 30px;
+  color: var(--accent-strong);
+  font-size: 1.02rem;
+  text-align: right;
+}
+
+.dice-feed-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.dice-feed-who {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--text);
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.dice-feed-time {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.dice-feed-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  color: var(--muted);
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+}
+
+.dice-feed-local {
+  color: var(--danger);
+  margin: 3px 0 0;
+  font-size: 0.68rem;
+}
+
+@media (max-width: 700px) {
+  .dice-feed {
+    right: 0.6rem;
+    bottom: 0.6rem;
+    width: min(280px, calc(100vw - 1.2rem));
+  }
+
+  .dice-feed-list {
+    max-height: 38vh;
+  }
+}
+
+@media print {
+  .dice-feed {
+    display: none;
+  }
+}
+
 .combat-modal {
   width: min(560px, 100%);
 }
