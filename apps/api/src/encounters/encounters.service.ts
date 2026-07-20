@@ -19,6 +19,7 @@ import { HexLore } from '../hexes/generation/lore-generator';
 import { CampaignsGateway } from '../realtime/campaigns.gateway';
 import { EncounterCreatureMode, GenerateEncounterDto } from './dto/generate-encounter.dto';
 import { ListEncountersQueryDto } from './dto/list-encounters-query.dto';
+import { UpdateCombatDto } from './dto/update-combat.dto';
 import { UpdateEncounterStatusDto } from './dto/update-encounter-status.dto';
 import { UpdateEncounterDto } from './dto/update-encounter.dto';
 import { generateEncounter } from './generation/encounter-generator';
@@ -204,7 +205,31 @@ export class EncountersService {
 
   private async touchCampaign(campaignId: string) {
     await this.dataSource.getRepository(Campaign).increment({ id: campaignId }, 'version', 1);
-    this.gateway.emitCampaignChanged(campaignId, 'ENCOUNTER_STATUS_CHANGED');
+    this.gateway.emitCampaignChanged(campaignId, 'ENCOUNTER_UPDATED');
+  }
+
+  async updateCombat(userId: string, campaignId: string, encounterId: string, dto: UpdateCombatDto) {
+    await this.campaignsService.ensureMaster(userId, campaignId);
+    const encounter = await this.encountersRepository.findOne({ where: { id: encounterId, campaignId } });
+    if (!encounter) throw new NotFoundException('Encontro não encontrado.');
+
+    encounter.initiativeOrder = dto.participants.map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      initiative: participant.initiative,
+      isPlayerCharacter: participant.isPlayerCharacter,
+      hitPoints: participant.hitPoints,
+      maxHitPoints: participant.maxHitPoints,
+      notes: participant.notes
+    }));
+    encounter.combatRound = dto.combatRound;
+    encounter.currentTurnIndex = dto.participants.length > 0
+      ? ((dto.currentTurnIndex % dto.participants.length) + dto.participants.length) % dto.participants.length
+      : 0;
+
+    const saved = await this.encountersRepository.save(encounter);
+    await this.touchCampaign(campaignId);
+    return saved;
   }
 
   private recommendedCr(averageLevel: number, partySize: number, intensity?: EncounterIntensity) {

@@ -1809,6 +1809,64 @@ select:focus {
   color: #9da6a0;
 }
 
+.combat-modal {
+  width: min(560px, 100%);
+}
+
+.combat-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.combat-order-list {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.combat-order-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.combat-order-list li.combat-turn-active {
+  border-color: var(--accent);
+  background: var(--surface-strong);
+}
+
+.combat-order-list li strong {
+  min-width: 26px;
+  color: var(--accent-strong);
+}
+
+.combat-participant-name {
+  flex: 1;
+}
+
+.combat-participant-name.is-pc {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.combat-hp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d8dcda;
+  font-size: 0.82rem;
+}
+
 .cosmic-concept {
   margin: -4px 0 0;
   color: #d8b6e2;

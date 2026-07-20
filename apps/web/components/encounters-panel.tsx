@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiRequest } from '@/lib/api';
+import { CombatTracker } from './combat-tracker';
 import {
   CosmicCreatureArchetype,
   CosmicCreatureMutation,
@@ -418,21 +419,25 @@ export function EncountersPanel({ campaignId, hex }: { campaignId: string; hex: 
     </div>
 
     {selectedEncounter && <EncounterDetail
+      campaignId={campaignId}
       encounter={selectedEncounter}
       busy={busy}
       onCopy={(text) => navigator.clipboard.writeText(text)}
       onStatus={updateStatus}
       onDelete={deleteEncounter}
+      onCombatUpdate={replaceEncounter}
     />}
   </section>;
 }
 
-function EncounterDetail({ encounter, busy, onCopy, onStatus, onDelete }: {
+function EncounterDetail({ campaignId, encounter, busy, onCopy, onStatus, onDelete, onCombatUpdate }: {
+  campaignId: string;
   encounter: RandomEncounter;
   busy: boolean;
   onCopy: (text: string) => Promise<void>;
   onStatus: (status: EncounterStatus) => Promise<void>;
   onDelete: () => Promise<void>;
+  onCombatUpdate: (updated: RandomEncounter) => void;
 }) {
   return <article className="encounter-detail">
     <header>
@@ -464,6 +469,7 @@ function EncounterDetail({ encounter, busy, onCopy, onStatus, onDelete }: {
     <div className="encounter-actions">
       <button className="ghost-button" disabled={busy} onClick={() => void onStatus('PREPARADO')}>Preparar</button>
       <button className="primary-button" disabled={busy} onClick={() => void onStatus('ATIVO')}>Ativar</button>
+      {encounter.status === 'ATIVO' && <CombatTracker campaignId={campaignId} encounter={encounter} onUpdate={onCombatUpdate} />}
       <button className="ghost-button" disabled={busy} onClick={() => void onStatus('CONCLUIDO')}>Concluir</button>
       <button className="ghost-button" disabled={busy} onClick={() => void onStatus('IGNORADO')}>Ignorar</button>
       <button className="danger-button" disabled={busy || encounter.status === 'ATIVO'} onClick={() => void onDelete()}>Excluir</button>

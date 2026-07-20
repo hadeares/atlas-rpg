@@ -569,6 +569,16 @@ export interface EncounterContent {
   creatureNarration?: string;
 }
 
+export interface CombatParticipant {
+  id: string;
+  name: string;
+  initiative: number;
+  isPlayerCharacter: boolean;
+  hitPoints?: number;
+  maxHitPoints?: number;
+  notes?: string;
+}
+
 export interface RandomEncounter {
   id: string;
   campaignId: string;
@@ -589,6 +599,9 @@ export interface RandomEncounter {
   generatorOptions: Record<string, unknown>;
   content: EncounterContent;
   resolutionNotes: string | null;
+  initiativeOrder: CombatParticipant[];
+  combatRound: number;
+  currentTurnIndex: number;
   startedAt: string | null;
   resolvedAt: string | null;
   createdAt: string;

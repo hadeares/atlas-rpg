@@ -4,6 +4,7 @@ import { AuthUser } from '../common/auth-user.interface';
 import { CurrentUser } from '../common/current-user.decorator';
 import { GenerateEncounterDto } from './dto/generate-encounter.dto';
 import { ListEncountersQueryDto } from './dto/list-encounters-query.dto';
+import { UpdateCombatDto } from './dto/update-combat.dto';
 import { UpdateEncounterStatusDto } from './dto/update-encounter-status.dto';
 import { UpdateEncounterDto } from './dto/update-encounter.dto';
 import { EncountersService } from './encounters.service';
@@ -58,6 +59,16 @@ export class EncountersController {
     @Body() dto: UpdateEncounterStatusDto
   ) {
     return this.encountersService.updateStatus(user.userId, campaignId, encounterId, dto);
+  }
+
+  @Patch(':encounterId/combat')
+  updateCombat(
+    @CurrentUser() user: AuthUser,
+    @Param('campaignId') campaignId: string,
+    @Param('encounterId') encounterId: string,
+    @Body() dto: UpdateCombatDto
+  ) {
+    return this.encountersService.updateCombat(user.userId, campaignId, encounterId, dto);
   }
 
   @Delete(':encounterId')

@@ -81,6 +81,16 @@ export interface EncounterParticipant {
   role: string;
 }
 
+export interface CombatParticipant {
+  id: string;
+  name: string;
+  initiative: number;
+  isPlayerCharacter: boolean;
+  hitPoints?: number;
+  maxHitPoints?: number;
+  notes?: string;
+}
+
 export interface EncounterContent {
   categoryLabel: string;
   intensityLabel: string;
@@ -173,6 +183,15 @@ export class RandomEncounter {
 
   @Column({ type: 'text', nullable: true })
   resolutionNotes: string | null;
+
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  initiativeOrder: CombatParticipant[];
+
+  @Column({ type: 'integer', default: 0 })
+  combatRound: number;
+
+  @Column({ type: 'integer', default: 0 })
+  currentTurnIndex: number;
 
   @Column({ type: 'uuid' })
   createdById: string;
