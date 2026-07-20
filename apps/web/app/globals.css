@@ -1758,10 +1758,93 @@ select:focus {
   width: min(480px, 100%);
 }
 
-.dice-quick-row {
+.dice-field {
+  display: grid;
+  gap: 6px;
+}
+
+.dice-field-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dice-type-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.dice-type-button,
+.dice-mode-button {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.dice-type-button:hover,
+.dice-mode-button:hover {
+  border-color: var(--border-light);
+}
+
+.dice-type-button.is-selected,
+.dice-mode-button.is-selected {
+  border-color: var(--accent);
+  background: rgba(208, 173, 104, 0.16);
+  color: var(--accent-strong);
+}
+
+.dice-steppers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.dice-stepper {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.dice-stepper input {
+  width: 100%;
+  text-align: center;
+}
+
+.dice-stepper input:disabled {
+  opacity: 0.5;
+}
+
+.dice-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dice-roll-button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 0.98rem;
+}
+
+.dice-mode-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(13, 16, 18, 0.28);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .dice-custom-row {
@@ -1800,9 +1883,45 @@ select:focus {
 }
 
 .dice-history li span {
+  display: flex;
   flex: 1;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
   color: #d8dcda;
   font-size: 0.82rem;
+}
+
+.dice-history-mode {
+  padding: 1px 7px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-style: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dice-history-rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dice-history-rolls b {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+/* Dado preterido pela vantagem/desvantagem: continua visível, mas apagado. */
+.dice-history-rolls b.is-discarded {
+  opacity: 0.45;
+  text-decoration: line-through;
 }
 
 .dice-history li small {

@@ -81,7 +81,7 @@ export class CampaignsGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('dice:roll')
   handleDiceRoll(@ConnectedSocket() client: Socket, @MessageBody() payload: unknown) {
     if (!payload || typeof payload !== 'object') return;
-    const { campaignId, notation, total, rolls, rolledBy } = payload as Record<string, unknown>;
+    const { campaignId, notation, total, rolls, rolledBy, mode } = payload as Record<string, unknown>;
     if (typeof campaignId !== 'string' || !client.rooms.has(this.room(campaignId))) return;
     if (typeof notation !== 'string' || typeof total !== 'number' || !Array.isArray(rolls)) return;
 
@@ -89,7 +89,10 @@ export class CampaignsGateway implements OnGatewayConnection, OnGatewayDisconnec
       campaignId,
       notation: notation.slice(0, 40),
       total,
-      rolls,
+      rolls: rolls.slice(0, 20),
+      // Vantagem/desvantagem só muda como a mesa lê o par de d20; qualquer
+      // outro valor vira NORMAL para o cliente não receber rótulo inventado.
+      mode: mode === 'VANTAGEM' || mode === 'DESVANTAGEM' ? mode : 'NORMAL',
       rolledBy: typeof rolledBy === 'string' ? rolledBy.slice(0, 60) : 'Alguém',
       at: new Date().toISOString()
     });
