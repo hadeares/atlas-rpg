@@ -87,6 +87,14 @@ export interface CampaignBible {
   };
 }
 
+export interface CampaignWeather {
+  condition: string;
+  visibility: 'BOA' | 'MEDIA' | 'BAIXA';
+  trend: 'ESTAVEL' | 'MELHORA' | 'PIORA';
+  startedAt: { day: number; period: string };
+  expiresAfterPeriods: number;
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -107,6 +115,7 @@ export interface Campaign {
   updatedAt: string;
   worldBible?: CampaignBible;
   solarDecayStage?: number;
+  currentWeather?: CampaignWeather | null;
 }
 
 export interface CampaignLiveState {

@@ -42,6 +42,8 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [hexes, setHexes] = useState<HexData[]>([]);
+  const [dangerFilter, setDangerFilter] = useState<'ALL' | 'BAIXO' | 'MEDIO' | 'ALTO'>('ALL');
+  const [biomeFilter, setBiomeFilter] = useState<string>('ALL');
   const [selectedHex, setSelectedHex] = useState<HexData | null>(null);
   const [members, setMembers] = useState<CampaignMember[]>([]);
   const [activeTab, setActiveTab] = useState<LoreTab>('RESUMO');
@@ -68,6 +70,26 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
 
   const isMaster = campaign?.accessRole === 'MASTER';
   const isPlayerView = campaign?.accessRole === 'PLAYER';
+
+  const availableBiomes = useMemo(() => {
+    const biomes = new Set<string>();
+    for (const hex of hexes) {
+      if (hex.discoveryStatus !== 'DESCONHECIDO' && hex.biome !== 'DESCONHECIDO') biomes.add(hex.biome);
+    }
+    return Array.from(biomes).sort();
+  }, [hexes]);
+
+  const visibleHexes = useMemo(() => {
+    if (!isMaster || (dangerFilter === 'ALL' && biomeFilter === 'ALL')) return hexes;
+    return hexes.filter((hex) => {
+      if (hex.discoveryStatus === 'DESCONHECIDO') return true;
+      if (biomeFilter !== 'ALL' && hex.biome !== biomeFilter) return false;
+      if (dangerFilter === 'BAIXO' && !(hex.dangerLevel >= 1 && hex.dangerLevel <= 3)) return false;
+      if (dangerFilter === 'MEDIO' && !(hex.dangerLevel >= 4 && hex.dangerLevel <= 6)) return false;
+      if (dangerFilter === 'ALTO' && hex.dangerLevel < 7) return false;
+      return true;
+    });
+  }, [hexes, isMaster, dangerFilter, biomeFilter]);
 
   useEffect(() => {
     const currentSession = readSession();
@@ -451,6 +473,12 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
         <div className="time-controls">
           <div className="time-display"><span>Dia</span><strong>{campaign.currentDay}</strong></div>
           <div className="time-display"><span>Período</span><strong>{periodLabels[campaign.currentPeriod]}</strong></div>
+          {campaign.currentWeather && (
+            <div className="time-display weather-display" title={`Visibilidade ${campaign.currentWeather.visibility.toLowerCase()}`}>
+              <span>Clima</span>
+              <strong>{campaign.currentWeather.condition}</strong>
+            </div>
+          )}
           {isMaster && <button className="primary-button compact-button" onClick={() => void advancePeriod()} disabled={busy}>Avançar período</button>}
           {session?.user.role === 'ADMIN' && <Link className="ghost-button button-link" href="/users">Usuários</Link>}
           <button className="ghost-button" onClick={logout}>Sair</button>
@@ -494,6 +522,31 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
             </section>
           )}
 
+          {isMaster && (
+            <section className="sidebar-section">
+              <p className="eyebrow">Filtro do mapa</p>
+              <label>Perigo
+                <select value={dangerFilter} onChange={(event) => setDangerFilter(event.target.value as typeof dangerFilter)}>
+                  <option value="ALL">Todos</option>
+                  <option value="BAIXO">Baixo (1-3)</option>
+                  <option value="MEDIO">Médio (4-6)</option>
+                  <option value="ALTO">Alto (7-10)</option>
+                </select>
+              </label>
+              <label>Bioma
+                <select value={biomeFilter} onChange={(event) => setBiomeFilter(event.target.value)}>
+                  <option value="ALL">Todos</option>
+                  {availableBiomes.map((biome) => (
+                    <option key={biome} value={biome}>{formatEnum(biome)}</option>
+                  ))}
+                </select>
+              </label>
+              {(dangerFilter !== 'ALL' || biomeFilter !== 'ALL') && (
+                <button className="ghost-button compact-button" onClick={() => { setDangerFilter('ALL'); setBiomeFilter('ALL'); }}>Limpar filtro</button>
+              )}
+            </section>
+          )}
+
           <section className="sidebar-section">
             <p className="eyebrow">Legenda</p>
             <div className="legend-list">
@@ -517,7 +570,7 @@ export function CampaignView({ campaignId }: { campaignId: string }) {
             </div>
           </div>
           <HexMap
-            hexes={hexes}
+            hexes={visibleHexes}
             selectedHex={selectedHex}
             currentQ={campaign.currentQ}
             currentR={campaign.currentR}

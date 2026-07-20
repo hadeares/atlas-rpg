@@ -307,6 +307,7 @@ export class CampaignsService implements OnModuleInit {
       ...safeCampaign,
       seed: playerView ? '' : campaign.seed,
       radius: playerView ? 0 : campaign.radius,
+      currentWeather: campaign.simulationState?.currentWeather ?? null,
       ...(playerView ? {} : {
         worldBible: bible,
         solarDecayStage: Number(campaign.simulationState?.solarDecayStage ?? 1)

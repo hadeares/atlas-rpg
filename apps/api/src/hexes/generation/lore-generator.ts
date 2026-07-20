@@ -237,8 +237,28 @@ function random(seed: string) {
   };
 }
 
+export interface RegionNameTracker {
+  titles: Set<string>;
+  monsters: Set<string>;
+}
+
 function pick<T>(items: readonly T[], next: () => number) {
   return items[Math.floor(next() * items.length) % items.length];
+}
+
+/**
+ * Sorteia evitando repetir um valor já usado nos hexágonos vizinhos da mesma
+ * região (até um número limitado de tentativas, para não travar quando o
+ * conjunto de opções do tema já estiver esgotado).
+ */
+function pickAvoidingUsed(items: readonly string[], next: () => number, used: Set<string> | undefined, attempts = 6) {
+  let candidate = pick(items, next);
+  if (!used) return candidate;
+  for (let attempt = 0; attempt < attempts && used.has(candidate); attempt += 1) {
+    candidate = pick(items, next);
+  }
+  used.add(candidate);
+  return candidate;
 }
 
 function pickDifferent<T>(items: readonly T[], first: T, next: () => number) {
@@ -571,20 +591,27 @@ export function generateHexLore(
   biome: BiomeType,
   dangerLevel: number,
   cosmicInfluence: number,
-  worldBible?: CampaignBible
+  worldBible?: CampaignBible,
+  usedNames?: RegionNameTracker
 ): HexLore {
   const bible = worldBible ?? generateCampaignBible(campaignSeed);
   const region = resolveCampaignRegion(bible, campaignSeed, q, r);
   const next = random(`${campaignSeed}:${q}:${r}:lore-v5`);
-  const title = `${pick(prefixes, next)} ${pick(suffixes, next)}`;
+  let title = `${pick(prefixes, next)} ${pick(suffixes, next)}`;
+  if (usedNames) {
+    for (let attempt = 0; attempt < 8 && usedNames.titles.has(title); attempt += 1) {
+      title = `${pick(prefixes, next)} ${pick(suffixes, next)}`;
+    }
+    usedNames.titles.add(title);
+  }
   const landmarkDescription = pick(landmarksByTerrain[terrain], next);
   const routeOne = pick(routeByTerrain[terrain], next);
   const routeTwo = pickDifferent(routeByTerrain[terrain], routeOne, next);
   const monsterNames = monstersByBiome[biome];
   const faunaNames = faunaByTerrain[terrain];
   const floraNames = floraByTerrain[terrain];
-  const selectedMonsters = pickMany(monsterNames, 3, next);
-  const [monsterOne, monsterTwo, monsterThree] = selectedMonsters;
+  const monsterOne = pickAvoidingUsed(monsterNames, next, usedNames?.monsters);
+  const [monsterTwo, monsterThree] = pickMany(monsterNames.filter((name) => name !== monsterOne), 2, next);
   const atmosphereOptions = atmosphereFragments;
   const historyOptions = historyFragments;
   const horrorName = `${pick(['O Eco', 'A Vigília', 'O Sono', 'A Boca', 'O Reflexo', 'A Respiração'], next)} ${pick(['Subterrâneo', 'Sem Nome', 'de Pedra', 'da Última Estrela', 'do Mundo Oco', 'Entre as Raízes'], next)}`;

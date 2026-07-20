@@ -1,6 +1,6 @@
-import { CampaignBible } from '../../campaigns/generation/campaign-bible-generator';
+import { CampaignBible, generateCampaignBible, resolveCampaignRegion } from '../../campaigns/generation/campaign-bible-generator';
 import { BiomeType, DiscoveryStatus, TerrainType } from '../../database/entities/hex.entity';
-import { generateHexLore } from './lore-generator';
+import { generateHexLore, RegionNameTracker } from './lore-generator';
 
 export interface GeneratedHexData {
   q: number;
@@ -59,24 +59,34 @@ function getTerrain(elevation: number, moisture: number, cosmicInfluence: number
   return TerrainType.PLANICIE;
 }
 
-function getBiome(terrain: TerrainType) {
-  const mapping: Record<TerrainType, BiomeType> = {
-    [TerrainType.PLANICIE]: BiomeType.CAMPOS_CINZENTOS,
-    [TerrainType.FLORESTA]: BiomeType.BOSQUE_MORTO,
-    [TerrainType.FLORESTA_DENSA]: BiomeType.MATA_PALIDA,
-    [TerrainType.COLINA]: BiomeType.TERRAS_ALTAS,
-    [TerrainType.MONTANHA]: BiomeType.PICOS_NEGROS,
-    [TerrainType.PANTANO]: BiomeType.BREJO_SILENCIOSO,
-    [TerrainType.REGIAO_ALAGADA]: BiomeType.AGUAS_MORTAS,
-    [TerrainType.RUINAS]: BiomeType.CICATRIZ_ANTIGA,
-    [TerrainType.CAMPO_DEVASTADO]: BiomeType.ERMO_DE_CINZAS,
-    [TerrainType.REGIAO_CONTAMINADA]: BiomeType.ZONA_DA_FERIDA
-  };
+// Cada terreno tem um bioma predominante e, para variar a paisagem entre
+// hexágonos do mesmo terreno, um bioma alternativo mais raro e tematicamente
+// vizinho. O sorteio é determinístico (mesma seed/q/r sempre dá o mesmo bioma).
+const biomeVariants: Record<TerrainType, readonly [BiomeType, BiomeType, number]> = {
+  [TerrainType.PLANICIE]: [BiomeType.CAMPOS_CINZENTOS, BiomeType.ERMO_DE_CINZAS, 0.78],
+  [TerrainType.FLORESTA]: [BiomeType.BOSQUE_MORTO, BiomeType.MATA_PALIDA, 0.7],
+  [TerrainType.FLORESTA_DENSA]: [BiomeType.MATA_PALIDA, BiomeType.BOSQUE_MORTO, 0.75],
+  [TerrainType.COLINA]: [BiomeType.TERRAS_ALTAS, BiomeType.PICOS_NEGROS, 0.75],
+  [TerrainType.MONTANHA]: [BiomeType.PICOS_NEGROS, BiomeType.TERRAS_ALTAS, 0.8],
+  [TerrainType.PANTANO]: [BiomeType.BREJO_SILENCIOSO, BiomeType.AGUAS_MORTAS, 0.7],
+  [TerrainType.REGIAO_ALAGADA]: [BiomeType.AGUAS_MORTAS, BiomeType.BREJO_SILENCIOSO, 0.72],
+  [TerrainType.RUINAS]: [BiomeType.CICATRIZ_ANTIGA, BiomeType.ERMO_DE_CINZAS, 0.75],
+  [TerrainType.CAMPO_DEVASTADO]: [BiomeType.ERMO_DE_CINZAS, BiomeType.CAMPOS_CINZENTOS, 0.75],
+  [TerrainType.REGIAO_CONTAMINADA]: [BiomeType.ZONA_DA_FERIDA, BiomeType.ZONA_DA_FERIDA, 1]
+};
 
-  return mapping[terrain];
+function getBiome(terrain: TerrainType, variantRoll: number) {
+  const [primary, alternate, primaryChance] = biomeVariants[terrain];
+  return variantRoll < primaryChance ? primary : alternate;
 }
 
-export function generateHex(seed: string, q: number, r: number, worldBible?: CampaignBible): GeneratedHexData {
+export function generateHex(
+  seed: string,
+  q: number,
+  r: number,
+  worldBible?: CampaignBible,
+  usedNames?: RegionNameTracker
+): GeneratedHexData {
   if (q === 0 && r === 0) {
     return {
       q,
@@ -122,6 +132,7 @@ export function generateHex(seed: string, q: number, r: number, worldBible?: Cam
   const cosmicWave = clamp((Math.sin((q + r) / 3.2) + 1) / 2);
   const cosmicInfluence = Math.round(clamp(cosmicBase * 0.58 + cosmicWave * 0.28 + distance * 0.012) * 100);
   const terrain = getTerrain(elevation, moisture, cosmicInfluence, randomFrom(seed, q, r, 'ruin'));
+  const biome = getBiome(terrain, randomFrom(seed, q, r, 'biome-variant'));
   const dangerLevel = Math.min(10, Math.max(1, Math.round(1 + distance * 0.42 + cosmicInfluence / 20 + randomFrom(seed, q, r, 'danger') * 2)));
   const discoveryStatus = DiscoveryStatus.DESCONHECIDO;
 
@@ -129,7 +140,7 @@ export function generateHex(seed: string, q: number, r: number, worldBible?: Cam
     q,
     r,
     terrain,
-    biome: getBiome(terrain),
+    biome,
     elevation: rounded(elevation),
     moisture: rounded(moisture),
     temperature: rounded(temperature),
@@ -142,20 +153,28 @@ export function generateHex(seed: string, q: number, r: number, worldBible?: Cam
       generatedBy: 'atlas-core-v2',
       generationSeed: `${seed}:${q}:${r}`,
       visitCount: 0,
-      lore: generateHexLore(seed, q, r, terrain, getBiome(terrain), dangerLevel, cosmicInfluence, worldBible)
+      lore: generateHexLore(seed, q, r, terrain, biome, dangerLevel, cosmicInfluence, worldBible, usedNames)
     }
   };
 }
 
 export function generateHexGrid(seed: string, radius: number, worldBible?: CampaignBible) {
+  const bible = worldBible ?? generateCampaignBible(seed);
   const hexes: GeneratedHexData[] = [];
+  const regionNameTrackers = new Map<string, RegionNameTracker>();
 
   for (let q = -radius; q <= radius; q += 1) {
     const minimumR = Math.max(-radius, -q - radius);
     const maximumR = Math.min(radius, -q + radius);
 
     for (let r = minimumR; r <= maximumR; r += 1) {
-      hexes.push(generateHex(seed, q, r, worldBible));
+      const regionId = resolveCampaignRegion(bible, seed, q, r).id;
+      let tracker = regionNameTrackers.get(regionId);
+      if (!tracker) {
+        tracker = { titles: new Set<string>(), monsters: new Set<string>() };
+        regionNameTrackers.set(regionId, tracker);
+      }
+      hexes.push(generateHex(seed, q, r, bible, tracker));
     }
   }
 
