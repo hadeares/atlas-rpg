@@ -1,0 +1,23 @@
+{
+  "name": "atlas-das-cinzas",
+  "version": "2.2.8",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c blue,magenta \"npm run dev -w @atlas/api\" \"npm run dev -w @atlas/web\"",
+    "build": "npm run build -w @atlas/api && npm run build -w @atlas/web",
+    "start:api": "npm run start:prod -w @atlas/api",
+    "start:web": "npm run start -w @atlas/web",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres redis"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.1"
+  }
+}
