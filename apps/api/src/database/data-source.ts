@@ -16,6 +16,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   synchronize: false,
   entities: [Campaign, CampaignMember, CampaignEvent, CreatureTemplate, Hex, RandomEncounter, User],
   migrations: [`${__dirname}/migrations/*.{ts,js}`]
