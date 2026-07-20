@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import { CampaignsService } from '../campaigns/campaigns.service';
 import { CampaignEvent } from '../database/entities/campaign-event.entity';
 import { CreaturesService } from '../creatures/creatures.service';
-import { Campaign } from '../database/entities/campaign.entity';
 import { Hex } from '../database/entities/hex.entity';
 import {
   EncounterCategory,

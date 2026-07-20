@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: atlas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-atlas_das_cinzas}
+      POSTGRES_USER: ${DB_USER:-atlas}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - atlas_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-atlas} -d ${DB_NAME:-atlas_das_cinzas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: atlas-redis
+    restart: unless-stopped
+    volumes:
+      - atlas_redis_data:/data
+    command: redis-server --appendonly yes
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: atlas-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3333
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-atlas_das_cinzas}
+      DB_USER: ${DB_USER:-atlas}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SYNCHRONIZE: "false"
+      DB_RUN_MIGRATIONS: "true"
+      REDIS_URL: redis://redis:6379
+      SRD_API_BASE_URL: ${SRD_API_BASE_URL:-https://www.dnd5eapi.co}
+      SRD_SYNC_ON_START: ${SRD_SYNC_ON_START:-true}
+    ports:
+      - "3333:3333"
+
+volumes:
+  atlas_postgres_data:
+  atlas_redis_data:

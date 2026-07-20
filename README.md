@@ -368,3 +368,53 @@ Esta versão corrige a seleção e a travessia no mapa, altera a névoa de guerr
 ### Visual do mapa
 
 As ilustrações de floresta, montanha, colina, água, pântano, ruínas e corrupção são desenhadas em SVG no próprio mapa. Elas funcionam offline e acompanham o zoom.
+
+## Deploy em produção
+
+A recomendação é hospedar o **web** (Next.js) na Vercel e a **API** (NestJS + Postgres + Redis) em um servidor separado com Docker.
+
+### Web na Vercel
+
+1. Importe o repositório na Vercel apontando o **Root Directory** para `apps/web`.
+2. Defina a variável de ambiente `NEXT_PUBLIC_API_URL` (por ambiente: Preview e Production) apontando para a URL pública da API, por exemplo `https://api.seu-dominio.com/api`.
+3. Build command e output ficam com o padrão do Next.js (`next build`), sem necessidade de configuração adicional.
+
+### API em servidor com Docker
+
+O `apps/api/Dockerfile` é multi-stage e deve ser buildado a partir da **raiz do monorepo** (porque a API faz parte de um workspace npm):
+
+```powershell
+docker build -f apps/api/Dockerfile -t atlas-api .
+```
+
+Para subir API + Postgres + Redis juntos em um servidor (VPS, por exemplo), use o `docker-compose.prod.yml`:
+
+```powershell
+Copy-Item .env.prod.example .env.prod
+# edite .env.prod com WEB_ORIGIN (domínio da Vercel), JWT_SECRET forte e senha do banco
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+Isso inicia o Postgres e o Redis apenas na rede interna do compose (não expostos ao host) e publica a API na porta `3333`. Coloque um proxy reverso (Nginx, Caddy, Traefik) na frente para TLS e o domínio público.
+
+No boot, a API roda as migrations automaticamente (`DB_RUN_MIGRATIONS=true` já configurado no compose de produção). Para produção **não** use `DB_SYNCHRONIZE=true` — o schema é controlado por migrations versionadas em `apps/api/src/database/migrations`.
+
+### Migrations do banco
+
+```powershell
+npm run migration:generate   # gera uma nova migration comparando entidades x banco
+npm run migration:run        # aplica migrations pendentes
+```
+
+Ambos os scripts usam `apps/api/src/database/data-source.ts`, que lê as mesmas variáveis `DB_*` do `.env`.
+
+### CI
+
+O workflow `.github/workflows/ci.yml` roda `npm ci`, `lint`, `typecheck` e `build` das duas apps em cada push/PR para `main`.
+
+### Checklist antes de publicar
+
+- `JWT_SECRET` real e forte (a API recusa subir em `NODE_ENV=production` com o valor de exemplo ou chaves curtas).
+- `WEB_ORIGIN` na API apontando para o domínio exato da Vercel (CORS).
+- `DB_SYNCHRONIZE=false` e migrations aplicadas.
+- `npm run lint`, `npm run typecheck` e `npm run build` passando localmente antes do deploy.

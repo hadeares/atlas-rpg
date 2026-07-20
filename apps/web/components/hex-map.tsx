@@ -625,19 +625,18 @@ function pixelToAxial(x: number, y: number) {
 }
 
 function roundAxial(q: number, r: number) {
-  let cubeX = q;
-  let cubeZ = r;
-  let cubeY = -cubeX - cubeZ;
+  const cubeX = q;
+  const cubeZ = r;
+  const cubeY = -cubeX - cubeZ;
   let roundedX = Math.round(cubeX);
-  let roundedY = Math.round(cubeY);
+  const roundedY = Math.round(cubeY);
   let roundedZ = Math.round(cubeZ);
   const differenceX = Math.abs(roundedX - cubeX);
   const differenceY = Math.abs(roundedY - cubeY);
   const differenceZ = Math.abs(roundedZ - cubeZ);
 
   if (differenceX > differenceY && differenceX > differenceZ) roundedX = -roundedY - roundedZ;
-  else if (differenceY > differenceZ) roundedY = -roundedX - roundedZ;
-  else roundedZ = -roundedX - roundedY;
+  else if (differenceY <= differenceZ) roundedZ = -roundedX - roundedY;
 
   return { q: roundedX, r: roundedZ };
 }

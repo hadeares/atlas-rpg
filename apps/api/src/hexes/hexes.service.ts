@@ -40,7 +40,7 @@ export class HexesService implements OnModuleInit {
       .createQueryBuilder()
       .update(Hex)
       .set({ discoveryStatus: DiscoveryStatus.DESCONHECIDO })
-      .where('\"discoveryStatus\" = :status', { status: DiscoveryStatus.AVISTADO })
+      .where('"discoveryStatus" = :status', { status: DiscoveryStatus.AVISTADO })
       .andWhere("COALESCE((\"state\"->>'visitCount')::integer, 0) = 0")
       .execute();
 

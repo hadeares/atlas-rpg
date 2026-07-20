@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -16,7 +17,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         database: config.getOrThrow<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
-        logging: false
+        migrations: [join(__dirname, 'migrations', '*.{ts,js}')],
+        migrationsRun: config.get<string>('DB_RUN_MIGRATIONS', 'false') === 'true',
+        logging: config.get<string>('DB_LOGGING', 'false') === 'true'
       })
     })
   ]

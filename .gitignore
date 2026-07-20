@@ -4,7 +4,9 @@ dist
 coverage
 .env
 .env.local
+.env.prod
 *.log
 .DS_Store
 .vscode
 .idea
+tsconfig.tsbuildinfo
